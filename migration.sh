@@ -151,18 +151,18 @@ instanceId=`aws ec2 run-instances \
 
 
 echo -e "The instance was succefully created, with id: $instanceId"
-echo "Wait for instace is in running state"
-while [[ $instanceState == "16" ]] #Running code
+echo "Wait for instace is in running state..."
+while [[ $instanceState != "16" ]] #Running code
 do
-   instanceState=`aws ec2 describe-instances --instance-ids $intanceId | \
+   instanceState=`aws ec2 describe-instance-status --instance-ids $intanceId | \
    awk '/"Code"/ {print substr($2,1,length($2)-1)}'`
-   echo $instaceState
    sleep 1
 done
 
 # Get the Public IP when instances is running
 ipAddress=`aws ec2 describe-instances --instance-ids $intanceId | \
-awk '/"PublicIpAddress"/ {print substr($2,1,length($2)-1)}'`
+awk '/"PublicIpAddress"/ {print substr($2,2,length($2)-3)}'`
+
 echo -e "Task finished. You can connect to instace with the IP Address:$ipAddress \n
 SSH  -> ssh -i "$AWS_KEYPAIRS" root@$ipAddress \n
-HTTP -> http://$ipAddress/
+HTTP -> http://$ipAddress/\n"
