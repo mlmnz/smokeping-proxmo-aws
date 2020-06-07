@@ -3,9 +3,13 @@
 #Useful variables
 VMSTOPSTA="stopped"
 TIMEOUT=0
-AWS_S3_BUCKET=mybucket
+VHD_IMAGE=vm.vhd
+AWS_S3_BUCKET=mlmnz-mybucket
 
 echo "Migration script to export and launch a VM from Proxmox to AWS"
+###################
+# Proxmox Image Selection
+###################
 
 # VM ID selection
 qm list
@@ -35,7 +39,8 @@ done
 ##################
 # Create a VHD image
 echo "Exporting VM disk as VHD image"
-vmdisk=`echo vm-$vmid-disk-0`
-qemu-img convert -f raw -O vpc /dev/zvol/rpool/$vmdisk /root/vm.vhd
+qemu-img convert -f raw -O vpc /dev/zvol/rpool/vm-$vmid-disk-0 /root/$VHD_IMAGE
 
-# Create a S3 Bucket
+# Create a S3 Bucket and upload the VHD image.
+aws s3 mb s3://$AWS_S3_BUCKET
+aws s3 cp  /root/$VHD_IMAGE s3://$AWS_S3_BUCKET
