@@ -14,8 +14,10 @@ AWS_KEYPAIRS="my-keypairs"
 
 taskId=""
 snapshopId=""
-imageId="
-
+imageId=""
+instanceId=""
+instanceState=""
+ipAddress=""
 
 
 echo "Migration script to export and launch a VM from Proxmox to AWS"
@@ -111,7 +113,8 @@ echo -e "Succeful AMI creation with id: $imageId"
 #Generate key pair and set read/write  permissions to owner
 echo "We need create a security group and a key pairs for the AWS Instance"
 aws ec2 create-key-pair --key-name $AWS_KEYPAIRS | \
-awk -F':' ' /"KeyMaterial"/{print substr($2,3,length($2)-4)}' >  ~/.ssh/$AWS_KEYPAIRS
+awk -F ":" ' /"KeyMaterial"/{print substr($2,3,length($2)-4)}' | \
+awk  '{gsub("\\\\n","\n")};1' >  ~/.ssh/$AWS_KEYPAIRS
 echo -e "The keypair '$AWS_KEYPAIRS' was created succefully, was store in ~/.ssh/ directory"
 chmod 600 ~/.ssh/$AWS_KEYPAIRS
 
@@ -133,3 +136,33 @@ aws ec2 authorize-security-group-ingress \
     --protocol tcp \
     --port 22 \
     --cidr 0.0.0.0/0
+
+
+######################################
+# EC2 Instance
+#####################################
+
+instanceId=`aws ec2 run-instances \
+    --image-id $imageId \
+    --count 1 --instance-type t2.micro \
+    --key-name $AWS_KEYPAIRS \
+    --security-groups $AWS_SG | \
+     awk '/"InstanceId"/ {print substr($2,2,length($2)-3)}'`
+
+
+echo -e "The instance was succefully created, with id: $instanceId"
+echo "Wait for instace is in running state"
+while [[ $instanceState == "16" ]] #Running code
+do
+   instanceState=`aws ec2 describe-instances --instance-ids $intanceId | \
+   awk '/"Code"/ {print substr($2,1,length($2)-1)}'`
+   echo $instaceState
+   sleep 1
+done
+
+# Get the Public IP when instances is running
+ipAddress=`aws ec2 describe-instances --instance-ids $intanceId | \
+awk '/"PublicIpAddress"/ {print substr($2,1,length($2)-1)}'`
+echo -e "Task finished. You can connect to instace with the IP Address:$ipAddress \n
+SSH  -> ssh -i "$AWS_KEYPAIRS" root@$ipAddress \n
+HTTP -> http://$ipAddress/
