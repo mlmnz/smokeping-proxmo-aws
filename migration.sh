@@ -142,13 +142,13 @@ aws ec2 authorize-security-group-ingress \
 # EC2 Instance
 #####################################
 
+#Create the instance 
 instanceId=`aws ec2 run-instances \
     --image-id $imageId \
     --count 1 --instance-type t2.micro \
     --key-name $AWS_KEYPAIRS \
     --security-groups $AWS_SG | \
      awk '/"InstanceId"/ {print substr($2,2,length($2)-3)}'`
-
 
 echo -e "The instance was succefully created, with id: $instanceId"
 echo "Wait for instace is in running state..."
